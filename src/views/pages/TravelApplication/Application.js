@@ -345,14 +345,61 @@ function getStepContent(step,
               />
             );
     case 2: {
+      // Extract baseline premium from internal/DB logic (e.g., $104.42)
+      const baselinePremium = values?.insuredPersons?.[0]?.selectedPlan?.insuranceAmount 
+        || values?.insuredPersons?.[0]?.selectedPlan?.calculatedInsuranceAmount 
+        || 0;
+      const baselinePremiumNum = Number(baselinePremium) || 0;
+      
+      // Extract TuGo quote data
       const availablePlansList = (tugoCtx && tugoCtx.availablePlans ? tugoCtx.availablePlans : []) || [];
       const selectedPlanCode = (tugoCtx && tugoCtx.selectedPlanCode) || (availablePlansList[0]?.code) || 'TUGO';
       const selectedPlan = availablePlansList.find(p => p.code === selectedPlanCode) || availablePlansList[0] || null;
       
-      // Always use safe defaults: never undefined
       const tugoPriceValue = (tugoCtx && tugoCtx.tugoPrice != null) ? Number(tugoCtx.tugoPrice) : null;
       const planTotalValue = selectedPlan && typeof selectedPlan.total === 'number' ? Number(selectedPlan.total) : 0;
-      const displayTotal = tugoPriceValue != null ? tugoPriceValue : planTotalValue;
+      
+      // Helper functions to decide display premium and availability
+      const getDisplayPremium = ({ baselinePremium, tugoQuote }) => {
+        // tugoQuote.planTotal is considered valid only if it's > 0
+        const tugoTotal = tugoQuote && Number(tugoQuote.planTotal) > 0 ? Number(tugoQuote.planTotal) : 0;
+        if (tugoTotal > 0) {
+          return tugoTotal;
+        }
+        // otherwise fall back to the baseline premium from our DB logic
+        return Number(baselinePremium) || 0;
+      };
+      
+      const getIsPlanAvailable = ({ baselinePremium, tugoQuote }) => {
+        // if TuGo succeeds: available
+        const tugoTotal = tugoQuote && Number(tugoQuote.planTotal) > 0 ? Number(tugoQuote.planTotal) : 0;
+        if (tugoTotal > 0) return true;
+        // if baselinePremium exists (like 104.42), we STILL consider plan available
+        const baselineNum = Number(baselinePremium) || 0;
+        if (baselineNum > 0) return true;
+        // only if both are missing/zero do we say "no available TuGo plan"
+        return false;
+      };
+      
+      // Build tugoQuote object for helpers
+      const tugoQuote = {
+        planTotal: tugoPriceValue != null ? tugoPriceValue : planTotalValue,
+      };
+      
+      // Compute final display premium using helper
+      const finalDisplayPremium = getDisplayPremium({ 
+        baselinePremium: baselinePremiumNum, 
+        tugoQuote 
+      });
+      
+      // Compute is plan available using helper
+      const isPlanAvailable = getIsPlanAvailable({ 
+        baselinePremium: baselinePremiumNum, 
+        tugoQuote 
+      });
+      
+      // Determine source used
+      const sourceUsed = (tugoQuote && Number(tugoQuote.planTotal) > 0) ? 'tugo' : 'baseline';
       
       // Always ensure planCode and planTotal are defined (never undefined)
       const safePlanCode = selectedPlan ? selectedPlan.code : (selectedPlanCode || 'TUGO');
@@ -360,10 +407,13 @@ function getStepContent(step,
       
       // eslint-disable-next-line no-console
       console.log('[PRICE-SOURCE]', {
-        from: (tugoCtx && tugoCtx.tugoPrice != null) ? 'TuGo-overlay' : 'TuGo-planCost',
+        sourceUsed,
+        baselinePremium: baselinePremiumNum,
+        tugoPlanTotal: tugoQuote.planTotal,
+        finalPremium: finalDisplayPremium,
         planCode: safePlanCode,
         planTotal: safePlanTotal,
-        displayTotal: Number(displayTotal),
+        displayTotal: finalDisplayPremium,
       });
       return (
               <>
@@ -378,19 +428,11 @@ function getStepContent(step,
                     {(tugoCtx && tugoCtx.tugoPrice) != null && (<span style={{ marginLeft:12 }}>price: <b>{`$${Number(tugoCtx.tugoPrice).toFixed(2)}`}</b></span>)}
                   </div>
                 )}
-                {/* Overlay display price (TuGo only) */}
+                {/* Overlay display price (uses baseline if TuGo fails) */}
                 <div style={{ textAlign:'right', marginBottom: 8 }}>
                   <div style={{ fontWeight:600 }}>
-                      {`$${(function(){
-                      const availablePlansList = (tugoCtx && tugoCtx.availablePlans ? tugoCtx.availablePlans : []) || [];
-                      const selectedPlanCode = (tugoCtx && tugoCtx.selectedPlanCode) || (availablePlansList[0]?.code) || 'TUGO';
-                      const sel = availablePlansList.find(p => p.code === selectedPlanCode) || availablePlansList[0] || null;
-                      const tugoPriceValue = (tugoCtx && tugoCtx.tugoPrice != null) ? Number(tugoCtx.tugoPrice) : null;
-                      const planTotalValue = sel && typeof sel.total === 'number' ? Number(sel.total) : 0;
-                      const tot = tugoPriceValue != null ? tugoPriceValue : planTotalValue;
-                      return Number(tot).toFixed(2);
-                    })()}`}
-                    {(tugoCtx && tugoCtx.tugoPrice) != null ? (<span style={{ marginLeft:8, fontSize:11, opacity:0.7 }}>(TuGo)</span>) : null}
+                      {`$${Number(finalDisplayPremium).toFixed(2)}`}
+                    {sourceUsed === 'tugo' ? (<span style={{ marginLeft:8, fontSize:11, opacity:0.7 }}>(TuGo)</span>) : null}
                   </div>
                 </div>
                 {/* Simple plan selection list */}
@@ -410,7 +452,10 @@ function getStepContent(step,
                       </label>
                     ))}
                   </div>
-                ) : (
+                ) : null}
+                
+                {/* Red error banner: only show if no plans available (baseline or TuGo) */}
+                {!isPlanAvailable && (
                   <div style={{ color:'#b00', fontSize:12, marginBottom: 12 }}>We are sorry, no available TuGo plan for these trip details.</div>
                 )}
                 <Product
