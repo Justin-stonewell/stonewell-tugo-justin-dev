@@ -868,6 +868,7 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
         console.error('[tugo pricing error]', e);
         setTugoPrice(null);
         setTugoPlanMeta(null);
+        setAvailablePlans([]);
       } finally {
         setTugoLoading(false);
       }
@@ -1485,7 +1486,15 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
                                       tax: 0,
                                       minimumPremium: 0,
                                     }];
+                                    const fallbackUiPlans = [{
+                                      code: "FALLBACK",
+                                      name: "TuGo (Fallback)",
+                                      premium: 0,
+                                      tax: 0,
+                                      total: 0,
+                                    }];
                                     setNormalizedQuote({ endpoint: resp?.endpoint || "quotePrice", requestEcho: resp?.request, plans: fallbackPlans });
+                                    setAvailablePlans(fallbackUiPlans);
                                     setTugoPrice(0);
                                     setTugoPlanMeta({ code: "FALLBACK", name: "TuGo (Fallback)" });
                                     setQuoteError(resp?.response?.errorMessage || "TuGo quote unavailable - using fallback premium");
@@ -1504,6 +1513,12 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
                                     tax: Number(p.tax || 0),
                                     minimumPremium: Number(p.minimumPremium || 0),
                                   }));
+                                  
+                                  // Map plans for UI display (with code, name, total properties)
+                                  const uiPlans = mapPlansForUI(resp?.response || {});
+                                  console.log('[quote:uiPlans]', uiPlans);
+                                  setAvailablePlans(uiPlans);
+                                  
                                   setNormalizedQuote({ endpoint: resp?.endpoint || "quotePrice", requestEcho: resp?.request, plans });
                                   if (plans[0]?.planCode) setSelectedPlanCode(plans[0].planCode);
                                   // 표시 가격만 TuGo로 교체
@@ -1514,12 +1529,14 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
                                     // No plans available - set fallback
                                     setTugoPrice(0);
                                     setTugoPlanMeta({ code: "NO_PLANS", name: "No TuGo plans available" });
+                                    setAvailablePlans([]);
                                   }
                                 } catch (e) {
                                   console.warn('[quote:error]', String(e));
                                   setQuoteError(e?.message || 'Failed to fetch quote');
                                   // Set fallback values on error
                                   setTugoPrice(0);
+                                  setAvailablePlans([]);
                                   setNormalizedQuote({ endpoint: "quotePrice", requestEcho: null, plans: [] });
                                 } finally {
                                   setQuoteLoading(false);
