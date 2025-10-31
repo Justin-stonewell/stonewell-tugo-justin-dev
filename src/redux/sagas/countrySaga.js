@@ -35,15 +35,18 @@ const FALLBACK_PROVINCES = {
 
 // get all country
 function getCountry() {
-  // Always call the real API (same as production)
+  // Always call the real API - no Preview mode short-circuit
+  const fullUrl = `${API_URL}api/v1/countries/country`;
+  console.log('[countrySaga] API called', fullUrl);
+  
   return axios
-    .get(`${API_URL}api/v1/countries/country`)
+    .get(fullUrl)
     .then((res) => {
-      // console.log(res.data)
+      console.log('[countrySaga] Country API success, response:', res.data);
       return res.data
     })
     .catch((error) => {
-      // console.log('error in country saga: ' + error)
+      console.error('[countrySaga] Country API error:', error.message, error.response?.status, fullUrl);
       // Only return error - let the saga handle fallback if needed
       throw error;
     })
@@ -53,6 +56,7 @@ function* fetchCountry() {
   try {
     const countries = yield call(getCountry)
     yield delay(500)
+    console.log('[countrySaga] Dispatching GET_COUNTRY_SUCCESS with data:', countries);
     yield put({ type: 'GET_COUNTRY_SUCCESS', countries: countries })
   } catch (e) {
     // LAST RESORT: If API call fails completely, use fallback data
@@ -64,15 +68,18 @@ function* fetchCountry() {
 
 // get all province
 function getProvince() {
-  // Always call the real API (same as production)
+  // Always call the real API - no Preview mode short-circuit
+  const fullUrl = `${API_URL}api/v1/countries/province`;
+  console.log('[countrySaga] API called', fullUrl);
+  
   return axios
-    .get(`${API_URL}api/v1/countries/province`)
+    .get(fullUrl)
     .then((res) => {
-      // console.log(res.data)
+      console.log('[countrySaga] Province API success, response:', res.data);
       return res.data
     })
     .catch((error) => {
-      // console.log("error in province saga: "+ error)
+      console.error('[countrySaga] Province API error:', error.message, error.response?.status, fullUrl);
       // Only return error - let the saga handle fallback if needed
       throw error;
     })
@@ -82,6 +89,7 @@ function* fetchProvince() {
   try {
     const provinces = yield call(getProvince)
     yield delay(500)
+    console.log('[countrySaga] Dispatching GET_PROVINCE_SUCCESS with data:', provinces);
     yield put({ type: 'GET_PROVINCE_SUCCESS', provinces: provinces })
   } catch (e) {
     // LAST RESORT: If API call fails completely, use fallback data
