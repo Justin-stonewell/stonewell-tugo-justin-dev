@@ -8,7 +8,9 @@ const USE_NETLIFY_FUNCTIONS = String(
   process.env.REACT_APP_USE_NETLIFY_FUNCTIONS || 'false'
 ).toLowerCase() === 'true';
 
-const IS_PREVIEW_MODE = USE_NETLIFY_FUNCTIONS && !API_URL;
+// Preview mode: when using Netlify Functions AND no production API URL is set
+// API_URL is undefined, null, or empty string in Preview
+const IS_PREVIEW_MODE = USE_NETLIFY_FUNCTIONS && (!API_URL || API_URL === '' || API_URL === 'undefined');
 
 // Static mock data for Preview mode
 const PREVIEW_COUNTRIES = {
@@ -42,16 +44,15 @@ const PREVIEW_PROVINCES = {
 
 // get all country
 function getCountry() {
-  // In Preview mode (Netlify Functions + no API URL), return static data
-  if (IS_PREVIEW_MODE) {
-    console.log('[countrySaga] Using Preview mode static countries data');
+  // In Preview mode (using Netlify Functions), always use static data
+  // This ensures countries work in Preview regardless of API availability
+  if (USE_NETLIFY_FUNCTIONS) {
+    console.log('[countrySaga] Preview/Netlify Functions mode: using static countries data');
     return Promise.resolve(PREVIEW_COUNTRIES);
   }
 
-  // Try Netlify Functions if REACT_APP_USE_NETLIFY_FUNCTIONS is true
-  const endpoint = USE_NETLIFY_FUNCTIONS
-    ? '/.netlify/functions/api/v1/countries/country'
-    : `${API_URL}api/v1/countries/country`;
+  // Production: call the real API
+  const endpoint = `${API_URL}api/v1/countries/country`;
 
   return axios
     .get(endpoint)
@@ -61,12 +62,8 @@ function getCountry() {
     })
     .catch((error) => {
       // console.log('error in country saga: ' + error)
-      // If error in Preview mode, fall back to static data
-      if (IS_PREVIEW_MODE || USE_NETLIFY_FUNCTIONS) {
-        console.warn('[countrySaga] API call failed, using Preview static data:', error.message);
-        return PREVIEW_COUNTRIES;
-      }
-      return error
+      // In production, propagate the error
+      throw error;
     })
 }
 
@@ -74,10 +71,21 @@ function* fetchCountry() {
   try {
     const countries = yield call(getCountry)
     yield delay(500)
+    // Ensure we have valid data structure
+    if (!countries || !countries.data || !countries.data.rows) {
+      console.warn('[countrySaga] Invalid countries response, using Preview fallback');
+      if (IS_PREVIEW_MODE || USE_NETLIFY_FUNCTIONS) {
+        yield put({ type: 'GET_COUNTRY_SUCCESS', countries: PREVIEW_COUNTRIES })
+      } else {
+        yield put({ type: 'GET_COUNTRY_FAILED', message: 'Invalid response structure' })
+      }
+      return;
+    }
     yield put({ type: 'GET_COUNTRY_SUCCESS', countries: countries })
   } catch (e) {
     // If error and in Preview mode, use static data
-    if (IS_PREVIEW_MODE) {
+    console.warn('[countrySaga] Country fetch error, using fallback:', e.message);
+    if (IS_PREVIEW_MODE || USE_NETLIFY_FUNCTIONS) {
       yield put({ type: 'GET_COUNTRY_SUCCESS', countries: PREVIEW_COUNTRIES })
     } else {
       yield put({ type: 'GET_COUNTRY_FAILED', message: e.message })
@@ -87,16 +95,15 @@ function* fetchCountry() {
 
 // get all province
 function getProvince() {
-  // In Preview mode (Netlify Functions + no API URL), return static data
-  if (IS_PREVIEW_MODE) {
-    console.log('[countrySaga] Using Preview mode static provinces data');
+  // In Preview mode (using Netlify Functions), always use static data
+  // This ensures provinces work in Preview regardless of API availability
+  if (USE_NETLIFY_FUNCTIONS) {
+    console.log('[countrySaga] Preview/Netlify Functions mode: using static provinces data');
     return Promise.resolve(PREVIEW_PROVINCES);
   }
 
-  // Try Netlify Functions if REACT_APP_USE_NETLIFY_FUNCTIONS is true
-  const endpoint = USE_NETLIFY_FUNCTIONS
-    ? '/.netlify/functions/api/v1/countries/province'
-    : `${API_URL}api/v1/countries/province`;
+  // Production: call the real API
+  const endpoint = `${API_URL}api/v1/countries/province`;
 
   return axios
     .get(endpoint)
@@ -106,12 +113,8 @@ function getProvince() {
     })
     .catch((error) => {
       // console.log("error in province saga: "+ error)
-      // If error in Preview mode, fall back to static data
-      if (IS_PREVIEW_MODE || USE_NETLIFY_FUNCTIONS) {
-        console.warn('[countrySaga] API call failed, using Preview static data:', error.message);
-        return PREVIEW_PROVINCES;
-      }
-      return error
+      // In production, propagate the error
+      throw error;
     })
 }
 
@@ -119,10 +122,21 @@ function* fetchProvince() {
   try {
     const provinces = yield call(getProvince)
     yield delay(500)
+    // Ensure we have valid data structure
+    if (!provinces || !provinces.data || !provinces.data.rows) {
+      console.warn('[countrySaga] Invalid provinces response, using Preview fallback');
+      if (IS_PREVIEW_MODE || USE_NETLIFY_FUNCTIONS) {
+        yield put({ type: 'GET_PROVINCE_SUCCESS', provinces: PREVIEW_PROVINCES })
+      } else {
+        yield put({ type: 'GET_PROVINCE_FAILED', message: 'Invalid response structure' })
+      }
+      return;
+    }
     yield put({ type: 'GET_PROVINCE_SUCCESS', provinces: provinces })
   } catch (e) {
     // If error and in Preview mode, use static data
-    if (IS_PREVIEW_MODE) {
+    console.warn('[countrySaga] Province fetch error, using fallback:', e.message);
+    if (IS_PREVIEW_MODE || USE_NETLIFY_FUNCTIONS) {
       yield put({ type: 'GET_PROVINCE_SUCCESS', provinces: PREVIEW_PROVINCES })
     } else {
       yield put({ type: 'GET_PROVINCE_FAILED', message: e.message })
