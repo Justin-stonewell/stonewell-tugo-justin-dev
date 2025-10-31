@@ -843,9 +843,27 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
         console.warn('[quote:enter]', QUOTE_ENDPOINT, payload);
         const resp = await postQuoteTugo(payload);
         console.warn('[quote:done]', resp);
+        
+        // Handle fallback response (error case)
+        if (resp?.response?.error === "TOKEN_OR_QUOTE_FAILED") {
+          console.warn('[quote:fallback-auto] TuGo returned fallback response, premium=0');
+          const fallbackUiPlans = [{
+            code: "FALLBACK",
+            name: "TuGo (Fallback)",
+            premium: 0,
+            tax: 0,
+            total: 0,
+          }];
+          setAvailablePlans(fallbackUiPlans);
+          setTugoPrice(0);
+          setTugoPlanMeta({ code: "FALLBACK", name: "TuGo (Fallback)" });
+          return;
+        }
+        
         const plans = (resp?.response?.availablePlanPrices || []);
         // map for UI and default-select first MED/lowest plan
         const uiPlans = mapPlansForUI(resp?.response || {});
+        console.log('[quote:uiPlans-auto]', uiPlans);
         setAvailablePlans(uiPlans);
         if (uiPlans.length && !selectedPlanCode) setSelectedPlanCode(uiPlans[0].code);
         let chosen = plans
