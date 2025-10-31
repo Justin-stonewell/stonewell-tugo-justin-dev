@@ -884,8 +884,29 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
     const onProductStep = activeStep === 2;
     const ready = !!formData?.tripStartDate && !!formData?.tripEndDate && !!formData?.originProvince && Array.isArray(formData?.insuredPersons) && formData.insuredPersons.length > 0 && !!formData.insuredPersons[0]?.birthDate;
     const flag = USE_TUGO_API_PRICING || TUGO_DEBUG;
-    if (!flag || insuraceCompany !== 'Tugo' || !onProductStep || !ready) return;
-    if (didAutoFetchRef.current) return;
+    
+    // Log conditions for debugging
+    console.log('[TuGo Auto-Fetch] Conditions check:', {
+      onProductStep,
+      ready,
+      flag: flag,
+      USE_TUGO_API_PRICING,
+      TUGO_DEBUG,
+      insuraceCompany,
+      isTugo: insuraceCompany === 'Tugo',
+      activeStep,
+      didAutoFetch: didAutoFetchRef.current,
+      willFetch: flag && insuraceCompany === 'Tugo' && onProductStep && ready && !didAutoFetchRef.current,
+    });
+    
+    if (!flag || insuraceCompany !== 'Tugo' || !onProductStep || !ready) {
+      console.log('[TuGo Auto-Fetch] Skipping: conditions not met');
+      return;
+    }
+    if (didAutoFetchRef.current) {
+      console.log('[TuGo Auto-Fetch] Skipping: already fetched');
+      return;
+    }
     didAutoFetchRef.current = true;
     (async () => {
       try {
