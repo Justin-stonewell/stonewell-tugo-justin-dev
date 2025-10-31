@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- reCAPTCHA v2 스크립트 로드 -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+    <meta name="naver-site-verification" content="e6374d350d6105ea839464b3f4dc35cd8a768258" /> 
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" /> 
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>Stonewell Financial Service INC | Life, Critical Illness, Travel Insurance, Group Benefits and Investment </title>  
+    <meta name="description" content= "Visit Stonewell Financial today for insurance and investment product in Canada." data-rh="true" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+    />
+  </head>
+  <body>
+
+    <div id="root"></div>
+
+  
+  <!-- Netlify form detection blueprint for React SPA -->
+<form name="contact" method="POST"
+      data-netlify="true" data-netlify-recaptcha="true"
+      netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="contact" />
+  <input type="text" name="firstName" />
+  <input type="text" name="lastName" />
+  <input type="email" name="emailAdd" />
+  <textarea name="reqMessage"></textarea>
+  <div data-netlify-recaptcha="true"></div>
+</form>
+
+  </body>
+</html>

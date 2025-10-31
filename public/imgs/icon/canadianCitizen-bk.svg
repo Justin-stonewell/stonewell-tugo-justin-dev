@@ -1,0 +1,10 @@
+<svg id="Layer_3" height="512" viewBox="0 0 64 64" width="512" fill="#D1E8B3" xmlns="http://www.w3.org/2000/svg" data-name="Layer 3"
+     onmouseover="evt.target.setAttribute('style', 'opacity: 0.5; transform: scale(1.5);')"
+     onmouseout="evt.target.setAttribute('style', 'opacity: 1; transform: scale(1);')"
+     style="transition: transform 0.3s ease, opacity 0.3s ease;">
+  <path d="m11 13h10v34h-10z"/>
+  <path d="m5 13h4v48h-4z"/>
+  <path d="m9.009 4.372-2.009-1.206-2.009 1.206a4.12 4.12 0 0 0 -1.991 3.516 4.072 4.072 0 0 0 1.2 2.9l.214.212h5.172l.213-.213a4.072 4.072 0 0 0 1.2-2.9 4.12 4.12 0 0 0 -1.99-3.515z"/>
+  <path d="m51 13h10v34h-10z"/>
+  <path d="m23 47h26v-34h-26zm6-18v-3l4 3-2-7 3 2 2-4 2 4 3-2-2 7 4-3v3h3l-4 3 1 4-6-1.714v5.714h-2v-5.714l-6 1.714 1-4-4-3z"/>
+</svg>

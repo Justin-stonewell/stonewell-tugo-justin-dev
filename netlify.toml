@@ -1,0 +1,24 @@
+[build]
+  command   = "CI= node scripts/print-context.js && CI= npm run build && npm run zip:export"
+  publish   = "build"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[context.production.environment]
+  REACT_APP_USE_NETLIFY_FUNCTIONS = "true"
+  USE_TUGO_API_PRICING            = "true"
+  NODE_VERSION                    = "18"
+  NODE_OPTIONS                    = "--openssl-legacy-provider"
+
+[context.deploy-preview.environment]
+  REACT_APP_USE_NETLIFY_FUNCTIONS = "true"
+  USE_TUGO_API_PRICING            = "true"
+  NODE_VERSION                    = "18"
+  NODE_OPTIONS                    = "--openssl-legacy-provider"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
