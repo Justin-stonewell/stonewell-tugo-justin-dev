@@ -345,16 +345,25 @@ function getStepContent(step,
               />
             );
     case 2: {
-      const selectedPlan = (tugoCtx && tugoCtx.availablePlans ? tugoCtx.availablePlans : []).find(p => p.code === (tugoCtx && tugoCtx.selectedPlanCode)) || null;
-      const displayTotal = (tugoCtx && tugoCtx.tugoPrice != null)
-        ? Number(tugoCtx.tugoPrice)
-        : Number(selectedPlan && typeof selectedPlan.total === 'number' ? selectedPlan.total : 0);
+      const availablePlansList = (tugoCtx && tugoCtx.availablePlans ? tugoCtx.availablePlans : []) || [];
+      const selectedPlanCode = (tugoCtx && tugoCtx.selectedPlanCode) || (availablePlansList[0]?.code) || 'TUGO';
+      const selectedPlan = availablePlansList.find(p => p.code === selectedPlanCode) || availablePlansList[0] || null;
+      
+      // Always use safe defaults: never undefined
+      const tugoPriceValue = (tugoCtx && tugoCtx.tugoPrice != null) ? Number(tugoCtx.tugoPrice) : null;
+      const planTotalValue = selectedPlan && typeof selectedPlan.total === 'number' ? Number(selectedPlan.total) : 0;
+      const displayTotal = tugoPriceValue != null ? tugoPriceValue : planTotalValue;
+      
+      // Always ensure planCode and planTotal are defined (never undefined)
+      const safePlanCode = selectedPlan ? selectedPlan.code : (selectedPlanCode || 'TUGO');
+      const safePlanTotal = selectedPlan ? (typeof selectedPlan.total === 'number' ? Number(selectedPlan.total) : 0) : 0;
+      
       // eslint-disable-next-line no-console
       console.log('[PRICE-SOURCE]', {
         from: (tugoCtx && tugoCtx.tugoPrice != null) ? 'TuGo-overlay' : 'TuGo-planCost',
-        planCode: selectedPlan ? selectedPlan.code : undefined,
-        planTotal: selectedPlan ? selectedPlan.total : undefined,
-        displayTotal,
+        planCode: safePlanCode,
+        planTotal: safePlanTotal,
+        displayTotal: Number(displayTotal),
       });
       return (
               <>
@@ -372,10 +381,14 @@ function getStepContent(step,
                 {/* Overlay display price (TuGo only) */}
                 <div style={{ textAlign:'right', marginBottom: 8 }}>
                   <div style={{ fontWeight:600 }}>
-                    {`$${(function(){
-                      const sel = (tugoCtx && tugoCtx.availablePlans ? tugoCtx.availablePlans : []).find(p => p.code === (tugoCtx && tugoCtx.selectedPlanCode)) || null;
-                      const tot = (tugoCtx && tugoCtx.tugoPrice != null) ? Number(tugoCtx.tugoPrice) : Number(sel && typeof sel.total === 'number' ? sel.total : 0);
-                      return tot.toFixed(2);
+                      {`$${(function(){
+                      const availablePlansList = (tugoCtx && tugoCtx.availablePlans ? tugoCtx.availablePlans : []) || [];
+                      const selectedPlanCode = (tugoCtx && tugoCtx.selectedPlanCode) || (availablePlansList[0]?.code) || 'TUGO';
+                      const sel = availablePlansList.find(p => p.code === selectedPlanCode) || availablePlansList[0] || null;
+                      const tugoPriceValue = (tugoCtx && tugoCtx.tugoPrice != null) ? Number(tugoCtx.tugoPrice) : null;
+                      const planTotalValue = sel && typeof sel.total === 'number' ? Number(sel.total) : 0;
+                      const tot = tugoPriceValue != null ? tugoPriceValue : planTotalValue;
+                      return Number(tot).toFixed(2);
                     })()}`}
                     {(tugoCtx && tugoCtx.tugoPrice) != null ? (<span style={{ marginLeft:8, fontSize:11, opacity:0.7 }}>(TuGo)</span>) : null}
                   </div>
@@ -855,6 +868,7 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
             total: 0,
           }];
           setAvailablePlans(fallbackUiPlans);
+          setSelectedPlanCode("FALLBACK"); // Ensure selectedPlanCode is set
           setTugoPrice(0);
           setTugoPlanMeta({ code: "FALLBACK", name: "TuGo (Fallback)" });
           return;
@@ -884,9 +898,18 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
         }
       } catch (e) {
         console.error('[tugo pricing error]', e);
-        setTugoPrice(null);
-        setTugoPlanMeta(null);
-        setAvailablePlans([]);
+        // Set fallback values on error - ensure all values are defined
+        const fallbackUiPlans = [{
+          code: "ERROR",
+          name: "TuGo Quote Error",
+          premium: 0,
+          tax: 0,
+          total: 0,
+        }];
+        setAvailablePlans(fallbackUiPlans);
+        setSelectedPlanCode("ERROR"); // Ensure selectedPlanCode is set
+        setTugoPrice(0);
+        setTugoPlanMeta({ code: "ERROR", name: "TuGo Quote Error" });
       } finally {
         setTugoLoading(false);
       }
@@ -1513,6 +1536,7 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
                                     }];
                                     setNormalizedQuote({ endpoint: resp?.endpoint || "quotePrice", requestEcho: resp?.request, plans: fallbackPlans });
                                     setAvailablePlans(fallbackUiPlans);
+                                    setSelectedPlanCode("FALLBACK"); // Ensure selectedPlanCode is set
                                     setTugoPrice(0);
                                     setTugoPlanMeta({ code: "FALLBACK", name: "TuGo (Fallback)" });
                                     setQuoteError(resp?.response?.errorMessage || "TuGo quote unavailable - using fallback premium");
@@ -1538,23 +1562,42 @@ export default function Application({ vendorAccessCode, insuraceCompany, insurac
                                   setAvailablePlans(uiPlans);
                                   
                                   setNormalizedQuote({ endpoint: resp?.endpoint || "quotePrice", requestEcho: resp?.request, plans });
-                                  if (plans[0]?.planCode) setSelectedPlanCode(plans[0].planCode);
+                                  
+                                  // Always set selectedPlanCode to first plan if available
+                                  if (uiPlans.length > 0 && uiPlans[0]?.code) {
+                                    setSelectedPlanCode(uiPlans[0].code);
+                                  } else if (plans.length > 0 && plans[0]?.planCode) {
+                                    setSelectedPlanCode(plans[0].planCode);
+                                  }
+                                  
                                   // 표시 가격만 TuGo로 교체
-                                  if (USE_TUGO_API_PRICING && plans[0]) {
-                                    setTugoPrice(plans[0].planCost ?? plans[0].premium ?? 0);
-                                    setTugoPlanMeta({ code: plans[0].planCode, name: plans[0].planName });
+                                  if (USE_TUGO_API_PRICING && plans.length > 0 && plans[0]) {
+                                    const firstPlan = plans[0];
+                                    const planCost = firstPlan.planCost ?? firstPlan.premium ?? 0;
+                                    setTugoPrice(planCost);
+                                    setTugoPlanMeta({ code: firstPlan.planCode || "TUGO", name: firstPlan.planName || "TuGo Plan" });
                                   } else if (USE_TUGO_API_PRICING && plans.length === 0) {
                                     // No plans available - set fallback
                                     setTugoPrice(0);
+                                    setSelectedPlanCode("NO_PLANS"); // Ensure selectedPlanCode is set
                                     setTugoPlanMeta({ code: "NO_PLANS", name: "No TuGo plans available" });
                                     setAvailablePlans([]);
                                   }
                                 } catch (e) {
                                   console.warn('[quote:error]', String(e));
                                   setQuoteError(e?.message || 'Failed to fetch quote');
-                                  // Set fallback values on error
+                                  // Set fallback values on error - ensure all values are defined
+                                  const fallbackUiPlans = [{
+                                    code: "ERROR",
+                                    name: "TuGo Quote Error",
+                                    premium: 0,
+                                    tax: 0,
+                                    total: 0,
+                                  }];
+                                  setAvailablePlans(fallbackUiPlans);
+                                  setSelectedPlanCode("ERROR"); // Ensure selectedPlanCode is set
                                   setTugoPrice(0);
-                                  setAvailablePlans([]);
+                                  setTugoPlanMeta({ code: "ERROR", name: "TuGo Quote Error" });
                                   setNormalizedQuote({ endpoint: "quotePrice", requestEcho: null, plans: [] });
                                 } finally {
                                   setQuoteLoading(false);
