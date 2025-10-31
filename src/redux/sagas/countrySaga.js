@@ -36,8 +36,14 @@ const FALLBACK_PROVINCES = {
 // get all country
 function getCountry() {
   // Always call the real API - no Preview mode short-circuit
+  // Ensure API_URL is set - if not, throw clear error
+  if (!API_URL) {
+    console.error('[countrySaga] REACT_APP_API_URL is not set! Cannot fetch countries.');
+    throw new Error('REACT_APP_API_URL environment variable is not configured');
+  }
+  
   const fullUrl = `${API_URL}api/v1/countries/country`;
-  console.log('[countrySaga] API called', fullUrl);
+  console.log('[countrySaga] API called', fullUrl, 'API_URL value:', API_URL);
   
   return axios
     .get(fullUrl)
@@ -69,8 +75,14 @@ function* fetchCountry() {
 // get all province
 function getProvince() {
   // Always call the real API - no Preview mode short-circuit
+  // Ensure API_URL is set - if not, throw clear error
+  if (!API_URL) {
+    console.error('[countrySaga] REACT_APP_API_URL is not set! Cannot fetch provinces.');
+    throw new Error('REACT_APP_API_URL environment variable is not configured');
+  }
+  
   const fullUrl = `${API_URL}api/v1/countries/province`;
-  console.log('[countrySaga] API called', fullUrl);
+  console.log('[countrySaga] API called', fullUrl, 'API_URL value:', API_URL);
   
   return axios
     .get(fullUrl)
